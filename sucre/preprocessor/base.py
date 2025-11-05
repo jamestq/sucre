@@ -40,21 +40,21 @@ def combine(**kwargs) -> pd.DataFrame:
     id_columns: str | list[str] = []
     for input in inputs:
         path = Path(input.pop("path", ""))                
-        new = read_data(path, **input)
-        keep: list[str] = input.get("keep", [])
+        new = read_data(path, **input)        
+        keep: list[str] = input.get("keep", [])        
         drop: list[str] = input.get("drop", [])
         id_columns = input.get("id_columns", [])                                                    
         if not isinstance(id_columns, list) or not isinstance(keep, list) or not isinstance(drop, list):
             raise ValueError("id_columns, keep, and drop must be lists of strings")
+        if id_columns:
+                new.drop(columns=id_columns, axis=1, inplace=True)            
+        if drop:            
+            new.drop(columns=drop, axis=1, inplace=True)
+        if keep:
+            new = new[keep] 
         if df is None:
             df = new
-        else:
-            if id_columns:
-                new.drop(columns=id_columns, axis=1, inplace=True)            
-            if drop:
-                new.drop(columns=drop, axis=1, inplace=True)
-            if keep:
-                new = new[keep] 
+        else:            
             old_df = df.copy()            
             df = pd.concat([df, new], axis=1)
             if df.shape[1] != old_df.shape[1] + new.shape[1]:
