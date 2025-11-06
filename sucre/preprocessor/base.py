@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 
-__all__ = ["read_data", "combine"]
+__all__ = ["read_data", "combine", "filter"]
 
 def read_data(path: Path, **kwargs) -> pd.DataFrame:
     """Import data from a file.
@@ -25,7 +25,21 @@ def read_data(path: Path, **kwargs) -> pd.DataFrame:
         case _:
             raise ValueError(f"Unsupported file type: {path.suffix}")
 
-def combine(**kwargs) -> pd.DataFrame:
+def export_data(df: pd.DataFrame, **kwargs) -> None:
+    if not kwargs.get("output", None):
+        return        
+    output_path = Path(kwargs["output"])
+    match output_path.suffix.lower():
+        case ".csv":
+            df.to_csv(output_path, index=False)
+        case ".xlsx":
+            df.to_excel(output_path, index=False)
+        case ".parquet":
+            df.to_parquet(output_path, index=False)
+        case _:
+            raise ValueError(f"Unsupported output file type: {output_path.suffix}")
+
+def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     """Combine multiple DataFrames into one.
 
     Args:
@@ -35,8 +49,7 @@ def combine(**kwargs) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The combined DataFrame.
     """
-    inputs: list[dict] = kwargs.get("inputs", [])
-    df: pd.DataFrame | None = None
+    inputs: list[dict] = kwargs.get("inputs", [])    
     id_columns: str | list[str] = []
     for input in inputs:
         path = Path(input.pop("path", ""))                
@@ -46,8 +59,8 @@ def combine(**kwargs) -> pd.DataFrame:
         id_columns = input.get("id_columns", [])                                                    
         if not isinstance(id_columns, list) or not isinstance(keep, list) or not isinstance(drop, list):
             raise ValueError("id_columns, keep, and drop must be lists of strings")
-        if id_columns:
-                new.drop(columns=id_columns, axis=1, inplace=True)            
+        if id_columns and df is not None:
+            new.drop(columns=id_columns, axis=1, inplace=True)            
         if drop:            
             new.drop(columns=drop, axis=1, inplace=True)
         if keep:
@@ -60,15 +73,37 @@ def combine(**kwargs) -> pd.DataFrame:
             if df.shape[1] != old_df.shape[1] + new.shape[1]:
                 raise ValueError("Concatenated DataFrame has unexpected number of columns")
             if df.shape[0] != old_df.shape[0] or df.shape[0] != new.shape[0]:
-                raise ValueError("Concatenated DataFrame has unexpected number of rows")                
-    if kwargs.get("output"):
-        output_path = Path(kwargs["output"])
-        match output_path.suffix.lower():
-            case ".csv":
-                df.to_csv(output_path, index=False)
-            case ".xlsx":
-                df.to_excel(output_path, index=False)
-            case ".parquet":
-                df.to_parquet(output_path, index=False)
-            case _:
-                raise ValueError(f"Unsupported output file type: {output_path.suffix}")
+                raise ValueError("Concatenated DataFrame has unexpected number of rows")
+    export_data(df, **kwargs)
+    return df       
+
+def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
+    input = kwargs.get("input", None) if df is None else None
+    if input:
+        path = Path(input.get("path", ""))                
+        df = read_data(path, **kwargs)        
+    if df is None:
+        raise ValueError("No DataFrame to filter")
+    filters = kwargs.get("filters", [])
+    for filter in filters:
+        operation = filter.get("operation", "")
+        column = filter.get("column", "")
+        value = filter.get("value", None)
+        if operation == "==":
+            df = df[df[column] == value]
+        elif operation == "!=":
+            df = df[df[column] != value]
+        elif operation == "<":
+            df = df[df[column] < value]
+        elif operation == "<=":
+            df = df[df[column] <= value]
+        elif operation == ">":
+            df = df[df[column] > value]
+        elif operation == ">=":
+            df = df[df[column] >= value]
+    export_data(df, **kwargs)
+    return df
+
+        
+
+    

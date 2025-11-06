@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Annotated
-import typer, traceback, yaml
+import typer, traceback, yaml, pandas as pd
 
 from sucre import run as runner
 
@@ -15,8 +15,9 @@ def run(
     try:
         with open(config, "r") as f:
             config_data = yaml.safe_load(f)
+        df: pd.DataFrame | None = None
         for command, data in config_data.items():
-            runner(command, data)
+            df = runner(command, data, df)
     except Exception as e:
         typer.echo(f"Error: {e}")
         traceback.print_exc()
