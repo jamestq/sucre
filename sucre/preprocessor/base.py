@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 
-__all__ = ["read_data", "combine", "filter"]
+__all__ = ["combine", "filter"]
 
 def read_data(path: Path, **kwargs) -> pd.DataFrame:
     """Import data from a file.
@@ -80,7 +80,7 @@ def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
 def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     input = kwargs.get("input", None) if df is None else None
     if input:
-        path = Path(input.get("path", ""))                
+        path = Path(input)                
         df = read_data(path, **kwargs)        
     if df is None:
         raise ValueError("No DataFrame to filter")
