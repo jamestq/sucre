@@ -3,6 +3,7 @@ from pathlib import Path
 
 __all__ = ["combine", "filter"]
 
+
 def read_data(path: Path, **kwargs) -> pd.DataFrame:
     """Import data from a file.
 
@@ -17,7 +18,7 @@ def read_data(path: Path, **kwargs) -> pd.DataFrame:
     match path.suffix.lower():
         case ".csv":
             return pd.read_csv(path)
-        case ".xlsx":            
+        case ".xlsx":
             kwargs["tab"] = 0 if "tab" not in kwargs else kwargs["tab"]
             return pd.read_excel(path, sheet_name=kwargs["tab"])
         case ".parquet":
@@ -25,9 +26,10 @@ def read_data(path: Path, **kwargs) -> pd.DataFrame:
         case _:
             raise ValueError(f"Unsupported file type: {path.suffix}")
 
+
 def export_data(df: pd.DataFrame, **kwargs) -> None:
     if not kwargs.get("output", None):
-        return        
+        return
     output_path = Path(kwargs["output"])
     match output_path.suffix.lower():
         case ".csv":
@@ -39,6 +41,7 @@ def export_data(df: pd.DataFrame, **kwargs) -> None:
         case _:
             raise ValueError(f"Unsupported output file type: {output_path.suffix}")
 
+
 def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     """Combine multiple DataFrames into one.
 
@@ -49,39 +52,46 @@ def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The combined DataFrame.
     """
-    inputs: list[dict] = kwargs.get("inputs", [])    
+    inputs: list[dict] = kwargs.get("inputs", [])
     id_columns: str | list[str] = []
     for input in inputs:
-        path = Path(input.pop("path", ""))                
-        new = read_data(path, **input)        
-        keep: list[str] = input.get("keep", [])        
+        path = Path(input.pop("path", ""))
+        new = read_data(path, **input)
+        keep: list[str] = input.get("keep", [])
         drop: list[str] = input.get("drop", [])
-        id_columns = input.get("id_columns", [])                                                    
-        if not isinstance(id_columns, list) or not isinstance(keep, list) or not isinstance(drop, list):
+        id_columns = input.get("id_columns", [])
+        if (
+            not isinstance(id_columns, list)
+            or not isinstance(keep, list)
+            or not isinstance(drop, list)
+        ):
             raise ValueError("id_columns, keep, and drop must be lists of strings")
         if id_columns and df is not None:
-            new.drop(columns=id_columns, axis=1, inplace=True)            
-        if drop:            
+            new.drop(columns=id_columns, axis=1, inplace=True)
+        if drop:
             new.drop(columns=drop, axis=1, inplace=True)
         if keep:
-            new = new[keep] 
+            new = new[keep]
         if df is None:
             df = new
-        else:            
-            old_df = df.copy()            
+        else:
+            old_df = df.copy()
             df = pd.concat([df, new], axis=1)
             if df.shape[1] != old_df.shape[1] + new.shape[1]:
-                raise ValueError("Concatenated DataFrame has unexpected number of columns")
+                raise ValueError(
+                    "Concatenated DataFrame has unexpected number of columns"
+                )
             if df.shape[0] != old_df.shape[0] or df.shape[0] != new.shape[0]:
                 raise ValueError("Concatenated DataFrame has unexpected number of rows")
     export_data(df, **kwargs)
-    return df       
+    return df
+
 
 def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     input = kwargs.get("input", None) if df is None else None
     if input:
-        path = Path(input)                
-        df = read_data(path, **kwargs)        
+        path = Path(input)
+        df = read_data(path, **kwargs)
     if df is None:
         raise ValueError("No DataFrame to filter")
     filters = kwargs.get("filters", [])
@@ -103,7 +113,3 @@ def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
             df = df[df[column] >= value]
     export_data(df, **kwargs)
     return df
-
-        
-
-    

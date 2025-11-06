@@ -6,10 +6,11 @@ from sucre import run as runner
 
 app = typer.Typer()
 
+
 @app.command(
     context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
 )
-def run(    
+def run(
     config: Annotated[Path, typer.Argument(help="The path to the configuration file.")],
 ):
     try:

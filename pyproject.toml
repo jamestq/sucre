@@ -7,13 +7,7 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.11, <3.13"
-dependencies = [
-    "pycaret (>=3.3.2,<4.0.0)",
-    "typer (>=0.20.0,<0.21.0)",
-    "openpyxl (>=3.1.5,<4.0.0)",
-    "pyyaml (>=6.0.3,<7.0.0)"
-]
+requires-python = "^3.11, <3.13"
 
 
 [build-system]
@@ -29,3 +23,9 @@ pytest = "^8.4.2"
 [tool.poetry.scripts]
 sucre = "sucre.main:app"
 
+
+[tool.poetry.dependencies]
+pycaret = "^3.3.2"
+typer = "^0.20.0"
+openpyxl = "^3.1.5"
+pyyaml = "^6.0.3"
