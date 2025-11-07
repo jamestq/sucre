@@ -1,18 +1,13 @@
 import pandas as pd
 from pathlib import Path
 
-from .base import read_data, export_data
+from .base import read, export_data
 
 __all__ = ["encode_data"]
 
 
 def encode_data(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
-    input = kwargs.get("input", None) if df is None else None
-    if input:
-        path = Path(input)
-        df = read_data(path, **kwargs)
-    if df is None:
-        raise ValueError("No DataFrame to filter")
+    df = read(df, **kwargs)
     encodings = kwargs.get("encodings", {})
     for encoding in encodings:
         columns = encoding.get("columns", [])
@@ -45,6 +40,5 @@ def encode_data(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
             else:
                 raise Warning(
                     f"Encoding method not recognized or incomplete: {encoding}"
-                )
-    export_data(df, **kwargs)
+                )    
     return df

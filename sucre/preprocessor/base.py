@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 
-__all__ = ["combine", "filter"]
+__all__ = ["combine", "filter", "export_data"]
 
 
 def read_data(path: Path, **kwargs) -> pd.DataFrame:
@@ -17,14 +17,23 @@ def read_data(path: Path, **kwargs) -> pd.DataFrame:
     """
     match path.suffix.lower():
         case ".csv":
-            return pd.read_csv(path)
+            return pd.read_csv(path, index_col=None)
         case ".xlsx":
             kwargs["tab"] = 0 if "tab" not in kwargs else kwargs["tab"]
-            return pd.read_excel(path, sheet_name=kwargs["tab"])
+            return pd.read_excel(path, sheet_name=kwargs["tab"], index_col=None)
         case ".parquet":
             return pd.read_parquet(path)
         case _:
             raise ValueError(f"Unsupported file type: {path.suffix}")
+        
+def read(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
+    input = kwargs.get("input", None) if df is None else None    
+    if input:
+        path = Path(input)
+        df = read_data(path, **kwargs)
+    if df is None:
+        raise ValueError("No DataFrame loaded")
+    return df
 
 
 def export_data(df: pd.DataFrame, **kwargs) -> None:
@@ -82,18 +91,12 @@ def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
                     "Concatenated DataFrame has unexpected number of columns"
                 )
             if df.shape[0] != old_df.shape[0] or df.shape[0] != new.shape[0]:
-                raise ValueError("Concatenated DataFrame has unexpected number of rows")
-    export_data(df, **kwargs)
+                raise ValueError("Concatenated DataFrame has unexpected number of rows")        
     return df
 
 
 def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
-    input = kwargs.get("input", None) if df is None else None
-    if input:
-        path = Path(input)
-        df = read_data(path, **kwargs)
-    if df is None:
-        raise ValueError("No DataFrame to filter")
+    df = read(df, **kwargs)
     filters = kwargs.get("filters", [])
     for filter in filters:
         operation = filter.get("operation", "")
@@ -110,6 +113,5 @@ def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
         elif operation == ">":
             df = df[df[column] > value]
         elif operation == ">=":
-            df = df[df[column] >= value]
-    export_data(df, **kwargs)
+            df = df[df[column] >= value]    
     return df
