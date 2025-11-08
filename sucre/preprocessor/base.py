@@ -102,16 +102,17 @@ def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
         operation = filter.get("operation", "")
         column = filter.get("column", "")
         value = filter.get("value", None)
-        if operation == "==":
-            df = df[df[column] == value]
-        elif operation == "!=":
-            df = df[df[column] != value]
-        elif operation == "<":
-            df = df[df[column] < value]
-        elif operation == "<=":
-            df = df[df[column] <= value]
-        elif operation == ">":
-            df = df[df[column] > value]
-        elif operation == ">=":
-            df = df[df[column] >= value]    
+        match operation:
+            case "==":
+                df = df[df[column] == value]
+            case "!=":
+                df = df[df[column] != value]
+            case "<":
+                df = df[df[column] < value]
+            case "<=":
+                df = df[df[column] <= value]
+            case ">":
+                df = df[df[column] > value]
+            case ">=":
+                df = df[df[column] >= value]
     return df
