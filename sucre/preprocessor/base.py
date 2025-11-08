@@ -36,8 +36,8 @@ def read(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     return df
 
 
-def export_data(df: pd.DataFrame, **kwargs) -> None:
-    if not kwargs.get("output", None):
+def export_data(df: pd.DataFrame | None = None, **kwargs) -> None:
+    if not kwargs.get("output", None) or df is None:
         return
     output_path = Path(kwargs["output"])
     match output_path.suffix.lower():
