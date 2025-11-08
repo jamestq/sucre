@@ -200,7 +200,7 @@ def generate_nn_plots(y_true, y_pred, save_path=None):
     plot_roc_curve(y_true, y_pred, save_path)
     plot_precision_recall_curve(y_true, y_pred, save_path)
 
-def nn_classifier(epochs=200, warmpup_ratio=0.1, k_folds=2):   
+def nn_classifier(epochs=200, warmpup_ratio=0.1, k_folds=10):   
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
