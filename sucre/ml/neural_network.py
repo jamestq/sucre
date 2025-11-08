@@ -11,6 +11,9 @@ import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
 from pycaret.classification import get_config
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve
 
 def classification_metrics(y_test, y_pred):
     y_pred_binary = (y_pred >= 0.5).astype(int)  # Convert probabilities to binary predictions
@@ -85,19 +88,130 @@ class GlucoseClassifier(nn.Module):
     def forward(self, x):
         return torch.sigmoid(self.network(x).squeeze())
     
-def nn_classifier(epochs=200, warmpup_ratio=0.1, k_folds=10):   
+def plot_confusion_matrix(y_true, y_pred, save_path=None):
+    """Plot confusion matrix"""
+    y_pred_binary = (y_pred >= 0.5).astype(int)
+    cm = confusion_matrix(y_true, y_pred_binary)
+    
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Greens', 
+                xticklabels=['0', '1'],
+                yticklabels=['0', '1'],
+                cbar=False)
+    plt.title('NeuralNetwork Confusion Matrix')
+    plt.ylabel('True Class')
+    plt.xlabel('Predicted Class')
+    
+    if save_path:
+        plt.savefig(f"Confusion Matrix.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+def plot_roc_curve(y_true, y_pred, save_path=None):
+    """Plot ROC curve with per-class curves for binary classification"""
+    
+    # Calculate ROC curve for class 1 (positive class)
+    fpr_1, tpr_1, _ = roc_curve(y_true, y_pred)
+    auc_1 = auc(fpr_1, tpr_1)
+    
+    # Calculate ROC curve for class 0 (negative class)
+    # Invert predictions and labels
+    fpr_0, tpr_0, _ = roc_curve(1 - y_true, 1 - y_pred)
+    auc_0 = auc(fpr_0, tpr_0)
+    
+    # Micro-average: for binary, same as overall
+    micro_auc = roc_auc_score(y_true, y_pred)
+    
+    # Macro-average: average of both class AUCs
+    macro_auc = (auc_0 + auc_1) / 2
+    
+    plt.figure(figsize=(8, 6))
+    
+    # Plot class 0
+    plt.plot(fpr_0, tpr_0, color='#2E86AB', lw=2, 
+             label=f'ROC of class 0, AUC = {auc_0:.2f}')
+    
+    # Plot class 1
+    plt.plot(fpr_1, tpr_1, color='#a0bf84', lw=2, 
+             label=f'ROC of class 1, AUC = {auc_1:.2f}')
+    
+    # Plot micro-average (should match class 1 for binary)
+    plt.plot(fpr_1, tpr_1, color='#a0bf84', lw=2, linestyle='--',
+             label=f'micro-average ROC curve, AUC = {micro_auc:.2f}', alpha=0.7)
+    
+    # Plot macro-average
+    # Calculate average FPR/TPR for macro
+    all_fpr = np.unique(np.concatenate([fpr_0, fpr_1]))
+    mean_tpr = np.zeros_like(all_fpr)
+    mean_tpr += np.interp(all_fpr, fpr_0, tpr_0)
+    mean_tpr += np.interp(all_fpr, fpr_1, tpr_1)
+    mean_tpr /= 2
+    
+    plt.plot(all_fpr, mean_tpr, color='#a0bf84', lw=2, linestyle='-',
+             label=f'macro-average ROC curve, AUC = {macro_auc:.2f}', alpha=0.7)
+    
+    # Plot diagonal
+    plt.plot([0, 1], [0, 1], color='black', lw=1, linestyle=':')
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curves for NeuralNetworkClassifier')
+    plt.legend(loc="lower right")
+    plt.grid(True, alpha=0.3, color='gray', linestyle='-', linewidth=0.5)
+    
+    if save_path:
+        plt.savefig(f"AUC.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+def plot_precision_recall_curve(y_true, y_pred, save_path=None):
+    """Plot Precision-Recall curve"""
+    precision, recall, _ = precision_recall_curve(y_true, y_pred)
+    avg_precision = precision.mean()
+    
+    plt.figure(figsize=(8, 6))
+    
+    # Fill area under curve with light blue
+    plt.fill_between(recall, precision, alpha=0.3, color='lightblue')
+    
+    # Plot PR curve
+    plt.plot(recall, precision, color='#2E86AB', lw=2,
+             label='Binary PR curve')
+    
+    # Plot average precision line
+    plt.axhline(y=avg_precision, color='red', lw=2, linestyle='--',
+                label=f'Avg. precision={avg_precision:.2f}')
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve for NeuralNetworkClassifier')
+    plt.legend(loc="lower left")
+    plt.grid(True, alpha=0.3, color='gray', linestyle='-', linewidth=0.5)
+    
+    if save_path:
+        plt.savefig(f"Precision Recall.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+def generate_nn_plots(y_true, y_pred, save_path=None):
+    """Generate all three plots"""
+    plot_confusion_matrix(y_true, y_pred, save_path)
+    plot_roc_curve(y_true, y_pred, save_path)
+    plot_precision_recall_curve(y_true, y_pred, save_path)
+
+def nn_classifier(epochs=200, warmpup_ratio=0.1, k_folds=2):   
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    X_train, X_test, y_train, y_test = get_config("X_train_transformed"), get_config("X_test_transformed"), get_config("y_train_transformed"), get_config("y_test_transformed")     
+    X_train, X_test, y_train, y_test = get_config("X_train_transformed"), get_config("X_test_transformed"), get_config("y_train_transformed"), get_config("y_test_transformed")         
     # Ensure consistent format - convert to numpy arrays safely
     # PyCaret returns DataFrames/Series, sklearn can return either DataFrames or numpy arrays
     X_train_np = X_train.values if isinstance(X_train, pd.DataFrame) else np.asarray(X_train)
     X_test_np = X_test.values if isinstance(X_test, pd.DataFrame) else np.asarray(X_test)
     y_train_np = y_train.values if isinstance(y_train, (pd.Series, pd.DataFrame)) else np.asarray(y_train)
     y_test_np = y_test.values if isinstance(y_test, (pd.Series, pd.DataFrame)) else np.asarray(y_test)    
-    X_test_tensor = torch.FloatTensor(X_test_np)
-    y_test_tensor = torch.FloatTensor(y_test_np)
+    X_test_tensor = torch.FloatTensor(X_test_np)    
     
     # Initialize stratified k-fold
     skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=42)
@@ -254,12 +368,16 @@ def nn_classifier(epochs=200, warmpup_ratio=0.1, k_folds=10):
         X_test = X_test_tensor.to(device)
         y_pred = final_model(X_test).cpu().numpy()
     
-    test_metrics = classification_metrics(y_test, y_pred)
+    test_metrics = classification_metrics(y_test_np, y_pred)
     
     print(f"\n{'='*50}")
     print("Test Set Metrics:")
     print(f"{'='*50}")
     for key, value in test_metrics.items():
         print(f"  {key}: {value:.4f}")
+    
+    # Store predictions for plotting
+    final_model.y_test = y_test_np
+    final_model.y_pred = y_pred
     
     return cv_metrics_df, final_model
