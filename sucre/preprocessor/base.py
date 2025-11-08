@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 
-__all__ = ["combine", "filter", "export_data"]
+__all__ = ["combine", "filter", "export_data", "read"]
 
 
 def read_data(path: Path, **kwargs) -> pd.DataFrame:

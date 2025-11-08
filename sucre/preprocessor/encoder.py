@@ -1,10 +1,9 @@
 import pandas as pd
 from pathlib import Path
 
-from .base import read, export_data
+from .base import read
 
 __all__ = ["encode_data"]
-
 
 def encode_data(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     df = read(df, **kwargs)
