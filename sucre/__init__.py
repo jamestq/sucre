@@ -17,10 +17,10 @@ COMMANDS = {
     "train": train,        
 }
 
-def save_wrapper(fn: callable, df: pd.DataFrame, **data):
-    result: pd.DataFrame = fn(df, **data)           
-    export_data(result, **data)
-    return result
+def save_wrapper(fn: callable, df_list: list[pd.DataFrame], **data):
+    results: list[pd.DataFrame] = fn(df_list, **data)           
+    export_data(results, **data)
+    return results
 
 def custom(command, **kwargs) -> callable:
     path = kwargs.get("path", None)
@@ -44,7 +44,7 @@ def custom(command, **kwargs) -> callable:
     return func
 
 
-def run(command: str, data: dict, df: pd.DataFrame = None) -> pd.DataFrame:
+def run(command: str, data: dict, df_list: list[pd.DataFrame] = []) -> pd.DataFrame:
     fn = COMMANDS.get(command, None)    
     if fn is None:
         try:
@@ -53,4 +53,4 @@ def run(command: str, data: dict, df: pd.DataFrame = None) -> pd.DataFrame:
         except Exception as e:
             traceback.print_exc()
             raise ValueError(f"Unsupported command: {command}") from e
-    return save_wrapper(fn, df, **data)
+    return save_wrapper(fn, df_list, **data)    

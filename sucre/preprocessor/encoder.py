@@ -5,9 +5,7 @@ from .base import read
 
 __all__ = ["encode_data"]
 
-def encode_data(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
-    df = read(df, **kwargs)
-    encodings = kwargs.get("encodings", {})
+def apply_encodings(df: pd.DataFrame, encodings: dict) -> None:
     for encoding in encodings:
         columns = encoding.get("columns", [])
         if columns and isinstance(columns, str):
@@ -40,4 +38,10 @@ def encode_data(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
                 raise Warning(
                     f"Encoding method not recognized or incomplete: {encoding}"
                 )    
-    return df
+
+def encode_data(df_list: list[pd.DataFrame] = [] , **kwargs) -> list[pd.DataFrame]:
+    df_list = read(df_list, **kwargs)
+    encodings = kwargs.get("encodings", {})
+    for df in df_list:
+        apply_encodings(df, encodings)    
+    return df_list
