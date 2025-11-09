@@ -26,32 +26,35 @@ def read_data(path: Path, **kwargs) -> pd.DataFrame:
         case _:
             raise ValueError(f"Unsupported file type: {path.suffix}")
         
-def read(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
-    input = kwargs.get("input", None) if df is None else None    
+def read(df_list: list[pd.DataFrame] = [], **kwargs) -> list[pd.DataFrame]:
+    input = kwargs.get("input", None) if not df_list else None    
     if input:
         path = Path(input)
         df = read_data(path, **kwargs)
-    if df is None:
+        df_list.append(df)
+    if not df_list:
         raise ValueError("No DataFrame loaded")
-    return df
+    return df_list
 
 
-def export_data(df: pd.DataFrame | None = None, **kwargs) -> None:
-    if not kwargs.get("output", None) or df is None:
+def export_data(df_list: list[pd.DataFrame], **kwargs) -> None:
+    if not kwargs.get("output", None) or not df_list:
         return
     output_path = Path(kwargs["output"])
-    match output_path.suffix.lower():
-        case ".csv":
-            df.to_csv(output_path, index=False)
-        case ".xlsx":
-            df.to_excel(output_path, index=False)
-        case ".parquet":
-            df.to_parquet(output_path, index=False)
-        case _:
-            raise ValueError(f"Unsupported output file type: {output_path.suffix}")
+    for i, df in enumerate(df_list):
+        path = output_path if i == 0 else output_path.parent / f"{output_path.stem}_{i}{output_path.suffix}"
+        match output_path.suffix.lower():
+            case ".csv":
+                df.to_csv(path, index=False)
+            case ".xlsx":
+                df.to_excel(path, index=False)
+            case ".parquet":
+                df.to_parquet(path, index=False)
+            case _:
+                raise ValueError(f"Unsupported output file type: {output_path.suffix}")
 
 
-def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
+def combine(df_list: list[pd.DataFrame] = [], **kwargs) -> list[pd.DataFrame]:
     """Combine multiple DataFrames into one.
 
     Args:
@@ -61,22 +64,18 @@ def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The combined DataFrame.
     """
-    inputs: list[dict] = kwargs.get("inputs", [])
-    id_columns: str | list[str] = []
+    df = pd.concat(df_list, axis=1) if df_list else None
+    inputs: list[dict] = kwargs.get("inputs", [])    
     for input in inputs:
         path = Path(input.pop("path", ""))
         new = read_data(path, **input)
         keep: list[str] = input.get("keep", [])
-        drop: list[str] = input.get("drop", [])
-        id_columns = input.get("id_columns", [])
-        if (
-            not isinstance(id_columns, list)
-            or not isinstance(keep, list)
+        drop: list[str] = input.get("drop", [])        
+        if (            
+            not isinstance(keep, list)
             or not isinstance(drop, list)
         ):
-            raise ValueError("id_columns, keep, and drop must be lists of strings")
-        if id_columns and df is not None:
-            new.drop(columns=id_columns, axis=1, inplace=True)
+            raise ValueError("keep, and drop must be lists of strings")        
         if drop:
             new.drop(columns=drop, axis=1, inplace=True)
         if keep:
@@ -92,27 +91,33 @@ def combine(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
                 )
             if df.shape[0] != old_df.shape[0] or df.shape[0] != new.shape[0]:
                 raise ValueError("Concatenated DataFrame has unexpected number of rows")        
-    return df
+    df.reset_index(inplace=True)    
+    return [df]
 
 
-def filter(df: pd.DataFrame | None = None, **kwargs) -> pd.DataFrame:
-    df = read(df, **kwargs)
+def filter(df_list: list[pd.DataFrame] = [], **kwargs) -> list[pd.DataFrame]:
+    df_list = read(df_list, **kwargs)
     filters = kwargs.get("filters", [])
-    for filter in filters:
-        operation = filter.get("operation", "")
-        column = filter.get("column", "")
-        value = filter.get("value", None)
-        match operation:
-            case "==":
-                df = df[df[column] == value]
-            case "!=":
-                df = df[df[column] != value]
-            case "<":
-                df = df[df[column] < value]
-            case "<=":
-                df = df[df[column] <= value]
-            case ">":
-                df = df[df[column] > value]
-            case ">=":
-                df = df[df[column] >= value]
-    return df
+    drop_columns = kwargs.get("drop", [])
+    filtered_dfs = []
+    for df in df_list:
+        for filter in filters:
+            operation = filter.get("operation", "")
+            column = filter.get("column", "")
+            value = filter.get("value", None)
+            match operation:
+                case "==":
+                    df = df[df[column] == value]
+                case "!=":
+                    df = df[df[column] != value]
+                case "<":
+                    df = df[df[column] < value]
+                case "<=":
+                    df = df[df[column] <= value]
+                case ">":
+                    df = df[df[column] > value]
+                case ">=":
+                    df = df[df[column] >= value]
+        df.drop(columns=drop_columns, inplace=True)   
+        filtered_dfs.append(df)    
+    return filtered_dfs
