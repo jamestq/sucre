@@ -44,7 +44,7 @@ def custom(command, **kwargs) -> callable:
     return func
 
 
-def run(command: str, data: dict, df_list: list[pd.DataFrame] = []) -> pd.DataFrame:
+def run(command: str, data: dict, df_list: list[pd.DataFrame] = []) -> list[pd.DataFrame]:
     fn = COMMANDS.get(command, None)    
     if fn is None:
         try:
