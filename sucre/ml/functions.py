@@ -49,8 +49,7 @@ def initializer(df: pd.DataFrame, **kwargs):
         if not transformers and not normalizers:
             name = f"{target}_none"
             setup(data=data, target=target_column, experiment_name=name, **setup_settings, **feature_selection_settings)
-            yield data, target, "notransformed", get_config("X_train_transformed").shape[1]
-        breakpoint()
+            yield data, target, "notransformed", get_config("X_train_transformed").shape[1]        
 
 def save_data(output, *args, **kwargs):    
   output = make_dir(concat_path(Path(output), *args))   
@@ -69,7 +68,7 @@ def get_plots(index, model, model_name, target, transformer, **kwargs):
       print("No output path provided, skipping save.")
       return
   output = make_dir(concat_path(Path(kwargs["output"]), index, target, model_name, transformer))
-  plot_types = ["confusion_matrix", "pr", "auc", "calibration"]  
+  plot_types = ["confusion_matrix", "pr", "auc", "calibration", "class_report", "error"]  
   with change_dir(output):
     for plot_type in plot_types:    
       plot_model(model, plot=plot_type, save=True, scale=3)  
