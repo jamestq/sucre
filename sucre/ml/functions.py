@@ -26,7 +26,7 @@ def initializer(df: pd.DataFrame, **kwargs):
       "session_id": 42,
       "fold_strategy": "stratifiedkfold",
       "use_gpu": True,
-      "train_size": 0.8
+      "train_size": 0.9
     }
 
     feature_selection_settings = {
