@@ -1,4 +1,4 @@
-# Pipeline for training glucometric predictive models.
+# Glucometric prediction pipeline
 
 ## Requirements
 
