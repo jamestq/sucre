@@ -1,5 +1,5 @@
 import pandas as pd 
-import os
+from rich import print
 
 from pathlib import Path
 
@@ -26,7 +26,8 @@ def initializer(df: pd.DataFrame, **kwargs):
       "session_id": 42,
       "fold_strategy": "stratifiedkfold",
       "use_gpu": True,
-      "train_size": 0.9
+      "train_size": 0.9,      
+      "verbose": False,
     }
 
     feature_selection_settings = {
@@ -82,8 +83,9 @@ def train(df_list: list[pd.DataFrame] = [], **kwargs):
     if dropped_columns:
       df.drop(columns=dropped_columns, inplace=True)        
     models = kwargs.get("models", [])        
+    log_file = Path("training_log.txt")
     for _, target, data_transformer, size in initializer(df, **kwargs):
-      model_instances = []                  
+      model_instances = []                        
       for model_name in models:      
         model = create_model(model_name) if model_name != "neural_network" else nn_classifier(size)                  
         training = pull()                                                       
@@ -91,7 +93,13 @@ def train(df_list: list[pd.DataFrame] = [], **kwargs):
         prediction = predict_model(model)     
         metrics = pull()                   
         save_data(kwargs.get("output", None), index, target, model_name, data_transformer, training=training, prediction=prediction, metrics=metrics)
-        model_instances.append(model)
+        model_instances.append(model)        
+      if not log_file.exists():
+        with open(log_file, "w") as f:
+          f.write(f"Completed training models for target: \n - {target} with data transformer: {data_transformer}\n")
+      else:
+        with open(log_file, "a") as f:
+          f.write(f" - {target} with data transformer: {data_transformer}\n")
       compare_models(model_instances)
       comparison = pull()
       save_data(kwargs.get("output", None), index, target, comparison=comparison, file_suffix=data_transformer)            
