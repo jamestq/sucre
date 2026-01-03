@@ -3,7 +3,7 @@ from rich import print
 
 from pathlib import Path
 
-from pycaret.classification import setup, create_model, plot_model, pull, get_config, predict_model, compare_models
+from pycaret.classification import setup, create_model, plot_model, pull, get_config, predict_model, compare_models, save_model
  
 from sucre import read
 
@@ -26,8 +26,7 @@ def initializer(df: pd.DataFrame, **kwargs):
       "session_id": 42,
       "fold_strategy": "stratifiedkfold",
       "use_gpu": True,
-      "train_size": 0.9,      
-      "verbose": False,
+      "train_size": 0.9,            
     }
 
     feature_selection_settings = {
@@ -69,10 +68,18 @@ def get_plots(index, model, model_name, target, transformer, **kwargs):
       print("No output path provided, skipping save.")
       return
   output = make_dir(concat_path(Path(kwargs["output"]), index, target, model_name, transformer))
-  plot_types = ["confusion_matrix", "pr", "auc", "calibration", "class_report", "error"]  
+  plot_types = ["confusion_matrix", "pr", "auc", "calibration", "class_report", "error"]
   with change_dir(output):
-    for plot_type in plot_types:    
-      plot_model(model, plot=plot_type, save=True, scale=3)  
+    for plot_type in plot_types:
+      plot_model(model, plot=plot_type, save=True, scale=3)
+
+def save_model_to_folder(index, model, model_name, target, transformer, **kwargs):
+  if kwargs.get("output", None) is None:
+      print("No output path provided, skipping save.")
+      return
+  output = make_dir(concat_path(Path(kwargs["output"]), index, target, model_name, transformer))
+  with change_dir(output):
+    save_model(model, model_name)  
      
 def train(df_list: list[pd.DataFrame] = [], **kwargs):
   df = read(df_list, **kwargs)
@@ -86,12 +93,13 @@ def train(df_list: list[pd.DataFrame] = [], **kwargs):
     log_file = Path("training_log.txt")
     for _, target, data_transformer, size in initializer(df, **kwargs):
       model_instances = []                        
-      for model_name in models:      
-        model = create_model(model_name) if model_name != "neural_network" else nn_classifier(size)                  
-        training = pull()                                                       
-        get_plots(index, model, model_name, target, data_transformer, **kwargs)            
-        prediction = predict_model(model)     
-        metrics = pull()                   
+      for model_name in models:
+        model = create_model(model_name) if model_name != "neural_network" else nn_classifier(size)
+        training = pull()
+        get_plots(index, model, model_name, target, data_transformer, **kwargs)
+        save_model_to_folder(index, model, model_name, target, data_transformer, **kwargs)
+        prediction = predict_model(model)
+        metrics = pull()
         save_data(kwargs.get("output", None), index, target, model_name, data_transformer, training=training, prediction=prediction, metrics=metrics)
         model_instances.append(model)        
       if not log_file.exists():

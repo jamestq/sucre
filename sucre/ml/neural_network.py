@@ -9,12 +9,11 @@ from skorch import NeuralNetBinaryClassifier
 class CustomNeuralNetBinaryClassifier(NeuralNetBinaryClassifier):
 
   def convert_float32(self, X):
-    if not torch.backends.mps.is_available():
-      return X
+    # Always convert to float32 for consistency across all devices
     if isinstance(X, dict):
         X = {k: v.astype(np.float32) if hasattr(v, 'astype') else v for k, v in X.items()}
     elif hasattr(X, 'astype'):
-        X = X.astype(np.float32)   
+        X = X.astype(np.float32)
     return X
 
   def predict(self, X):
